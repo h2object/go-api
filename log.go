@@ -2,30 +2,38 @@
 package api
 
 import (
+	"fmt"
 	"time"
-	"strconv"
-	"github.com/h2object/log"
 )
 
-// type Logger interface {
-// 	ReqId() string
-// 	Xput(logs []string)
-// }
-
-type Logger struct {
-	*log.Logger
+type ConsoleLogger struct{
 }
 
-func NewLogger(lg *log.Logger) *Logger {
-	return &Logger{lg}
+func (lg ConsoleLogger) ReqId() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-func (lg *Logger) ReqId() string {
-	return strconv.FormatInt(time.Now().UnixNano(), 16)
-}
-
-func (lg *Logger) Xput(logs []string) {
+func (lg ConsoleLogger) Xput(logs []string) {
 	for _, log := range logs {
-		lg.Debug(log)
+		fmt.Println(log)
 	}
 }
+
+func (lg ConsoleLogger) Trace(format string, args ...interface{}) {
+	fmt.Printf("[TRACE] " + format + "\n", args...)
+}
+func (lg ConsoleLogger) Debug(format string, args ...interface{}){
+	fmt.Printf("[DEBUG] " + format + "\n", args...)	
+}
+func (lg ConsoleLogger) Info(format string, args ...interface{}){
+	fmt.Printf("[INFO] " + format + "\n", args...)
+}
+func (lg ConsoleLogger) Warn(format string, args ...interface{}) {
+	fmt.Printf("[WARN] " + format + "\n", args...)
+}
+func (lg ConsoleLogger) Error(format string, args ...interface{}) {
+	fmt.Printf("[ERROR] " + format + "\n", args...)
+}
+func (lg ConsoleLogger) Critical(format string, args ...interface{}){
+	fmt.Printf("[CRITICAL] " + format + "\n", args...)
+}	

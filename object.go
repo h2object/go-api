@@ -1,146 +1,163 @@
 package api
 
 import (
-	"net/url"
+	"github.com/h2object/rpc"
 	"path"
-	"github.com/h2object/httpRPC"
+	"net/url"
+	"errors"
 )
 
 type Object struct{
-	bucket  string
-	key 	string
-	value 	interface{}
+	Bucket string
+	Key string
+	Value interface{}
 }
 
-func NewObject(bucket string, key string, val interface{}) *Object {
-	return &Object{
-		bucket: bucket,
-		key: key,
-		value: val,
-	}	
-}
+//! --- Object ---
+func (h2o *H2Object) PostObject(l Logger, auth Auth, obj *Object) error {
+	if obj == nil {
+		return errors.New("object is nil")
+	}
 
-func (obj *Object) BucketURI(suffix string) string {
-	return path.Join(obj.bucket, obj.key + suffix)
-}
+	var params url.Values = nil
+	if obj.Key != "" {
+		params = url.Values{
+			"key": {obj.Key},
+		}
+	}
 
-func (obj *Object) URI(suffix string) string {
-	return path.Join(obj.bucket, obj.key + suffix)
-}
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, ".json"), params)
+	if l != nil {
+		l.Debug("URL: %s", URL)
+	}
 
-func (c *Client) PostObject(obj *Object) error {
-	v := url.Values{}
-	if obj.key != "" {
-		v.Add("key", obj.key)
-	}
-	if c.isAdmin {
-		v.Add("appid", ACCESS_KEY)
-		v.Add("secret", SECRET_KEY)		
-	}
-	if c.isLogin && c.token != "" {
-		v.Add("token", c.token)
-	}
-	u := rpc.BuildHttpURL(H2O_HOST, obj.BucketURI(".json"), v)
+	h2o.Lock()
+	defer h2o.Unlock()
 
-	var ret map[string]interface{}
-	if err := c.PostJson(u, obj.value, &ret); err != nil {
-		return err
-	}
-	obj.key = ret["created"].(string)
-	return nil
-}
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
 
-func (c *Client) PatchObject(obj *Object) error {
-	v := url.Values{}
-	if c.isAdmin {
-		v.Add("appid", ACCESS_KEY)
-		v.Add("secret", SECRET_KEY)		
-	}
-	if c.isLogin && c.token != "" {
-		v.Add("token", c.token)
-	}
-	u := rpc.BuildHttpURL(H2O_HOST, obj.URI(".json"), v)
-	if err := c.PatchJson(u, obj.value, nil); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Client) PutObject(obj *Object) error {
-	v := url.Values{}
-	if c.isAdmin {
-		v.Add("appid", ACCESS_KEY)
-		v.Add("secret", SECRET_KEY)		
-	}
-	if c.isLogin && c.token != "" {
-		v.Add("token", c.token)
-	}
-	u := rpc.BuildHttpURL(H2O_HOST, obj.URI(".json"), v)
-	if err := c.PutJson(u, obj.value, nil); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Client) DeleteObject(obj *Object) error {
-	v := url.Values{}
-	if c.isAdmin {
-		v.Add("appid", ACCESS_KEY)
-		v.Add("secret", SECRET_KEY)		
-	}
-	if c.isLogin && c.token != "" {
-		v.Add("token", c.token)
-	}
-	u := rpc.BuildHttpURL(H2O_HOST, obj.URI(".json"), v)
-	if err := c.Delete(u, nil); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Client) SizeOfObject(obj *Object, size *int64) error {
-	v := url.Values{}
-	if c.isAdmin {
-		v.Add("appid", ACCESS_KEY)
-		v.Add("secret", SECRET_KEY)		
-	}
-	if c.isLogin && c.token != "" {
-		v.Add("token", c.token)
-	}
-	u := rpc.BuildHttpURL(H2O_HOST, obj.URI(".size"), v)
-	
-	var ret map[string]interface{}
-	if err := c.Get(u, &ret); err != nil {
-		return err
-	}
-	*size = ret["size"].(int64)
-	return nil
-}
-
-func (c *Client) KeysOfObject(obj *Object, keys []string) error {
-	v := url.Values{}
-	if c.isAdmin {
-		v.Add("appid", ACCESS_KEY)
-		v.Add("secret", SECRET_KEY)		
-	}
-	if c.isLogin && c.token != "" {
-		v.Add("token", c.token)
-	}
-	u := rpc.BuildHttpURL(H2O_HOST, obj.URI(".keys"), v)
-	
-	var ret map[string]interface{}
-	if err := c.Get(u, &ret); err != nil {
+	ret := map[string]interface{}{}
+	if err := h2o.conn.PostJson(l, URL, obj.Value, &ret); err != nil {
 		return err
 	}
 	
-	return nil
-}
-
-func (c *Client) TotalObject(obj *Object, total *int64, objects *int64) error {
+	obj.Key = ret["key"].(string)
+	if l != nil {
+		l.Debug("obj: %v", obj)
+	}
 	return nil	
 }
 
-func (c *Client) GetObject(obj *Object) error {
+func (h2o *H2Object) PutObject(l Logger, auth Auth, obj *Object) error {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, obj.Key+ ".json"), nil)
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	if err := h2o.conn.PutJson(l, URL, obj.Value, nil); err != nil {
+		return err
+	}
 	return nil
 }
 
+func (h2o *H2Object) PatchObject(l Logger, auth Auth, obj *Object) error {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, obj.Key+ ".json"), nil)
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	if err := h2o.conn.PatchJson(l, URL, obj.Value, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h2o *H2Object) DeleteObject(l Logger, auth Auth, obj *Object) error {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, obj.Key+ ".json"), nil)
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	if err := h2o.conn.Delete(l, URL, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h2o *H2Object) GetObject(l Logger, auth Auth, obj *Object) error {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, obj.Key+ ".json"), nil)
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	var ret interface{}
+	if err := h2o.conn.Get(l, URL, &ret); err != nil {
+		return err
+	}
+
+	obj.Value = ret
+	return nil
+}
+
+func (h2o *H2Object) Size(l Logger, auth Auth, obj *Object) (int64, error) {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, obj.Key+ ".size"), nil)
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	ret := map[string]interface{}{}
+	if err := h2o.conn.Get(l, URL, &ret); err != nil {
+		return 0, err
+	}
+
+	size := ret["size"].(float64)
+	return int64(size), nil
+}
+
+func (h2o *H2Object) Keys(l Logger, auth Auth, obj *Object) (interface{}, error) {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, obj.Key+ ".keys"), nil)
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	var ret interface{}
+	if err := h2o.conn.Get(l, URL, &ret); err != nil {
+		return 0, err
+	}
+	return ret, nil
+}
+
+func (h2o *H2Object) Total(l Logger, auth Auth, obj *Object) (interface{}, error) {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(obj.Bucket, obj.Key+ ".total"), nil)
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	var ret interface{}
+	if err := h2o.conn.Get(l, URL, &ret); err != nil {
+		return 0, err
+	}
+	return ret, nil
+}

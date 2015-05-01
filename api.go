@@ -1,32 +1,40 @@
 package api
 
 import (
-	"github.com/h2object/httpRPC"
+	"fmt"
+	"sync"
+	"github.com/h2object/rpc"
 )
 
-type Client struct{
-	token 	string
-	isLogin bool
-	isAdmin bool
-	Conn rpc.Client
+type Auth interface{
+	rpc.PreRequest
 }
 
-func NewClient() *Client {
-	return &Client{}
+type Logger interface{
+	rpc.Logger
+	Trace(format string, args ...interface{})
+	Debug(format string, args ...interface{})
+	Info(format string, args ...interface{})
+	Warn(format string, args ...interface{}) 
+	Error(format string, args ...interface{}) 
+	Critical(format string, args ...interface{})
 }
 
-func (c *Client) SetAdmin(access_key, secret_key string) {
-	if access_key != "" && secret_key != "" {
-		ACCESS_KEY = access_key
-		SECRET_KEY = secret_key
+var UserAgent = "Golang h2object/go-api package"
+
+type H2Object struct{
+	sync.RWMutex
+	addr string
+	conn *rpc.Client
+}
+
+func NewH2Object(host string, port int) *H2Object {
+	connection := rpc.NewClient(rpc.H2OAnalyser{})
+	h2o := &H2Object{
+		addr: fmt.Sprintf("%s:%d", host, port),	
+		conn: connection,
 	}
-	isAdmin = true
+	return h2o
 }
 
-func (c *Client) SignIn(provider string, auth string, credental string) error {
 
-}
-
-func (c *Client) SignOff() error {
-
-}
