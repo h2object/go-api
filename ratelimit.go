@@ -1,25 +1,70 @@
 package api
 
+import (
+	"github.com/h2object/rpc"
+	"path"
+)
 
-//! --- RateLimit ---
-// type Frequece struct{
-	
-// }
+type RateLimit struct{
+	URI 	 string 	`json:"-"`
+	Seconds  int64		`json:"seconds"`
+	Limit    int64 		`json:"limit"`
+}
 
-// type RateLimit struct{
-// 	Bucket string
-// 	Key string
-// 	freq Frequence
-// }
+func (h2o *H2Object) SetRateLimit(l Logger, auth Auth,ratelimit *RateLimit) error {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(ratelimit.URI, ".ratelimit"), nil)
+	if l != nil {
+		l.Debug("URL: %s", URL)
+	}
 
-// func (h2o *H2Object) PostRateLimit(l Logger, auth Auth, bucket string, key string, val interface{}) error {
-// 	return nil	
-// }
+	h2o.Lock()
+	defer h2o.Unlock()
 
-// func (c *Client) DeleteRateLimit(l Logger, auth Auth, bucket string, key string) error {
-// 	return nil	
-// }
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
 
-// func (c *Client) GetRateLimit(l Logger, auth Auth, bucket string, key string) (interface{}, error) {
-// 	return nil,nil	
-// }
+	ret := map[string]interface{}{}
+	if err := h2o.conn.PostJson(l, URL, ratelimit, &ret); err != nil {
+		return err
+	}
+	if l != nil {
+		l.Debug("ret: %v", ret)
+	}
+	return nil
+}
+
+func (h2o *H2Object) DelRateLimit(l Logger, auth Auth,ratelimit *RateLimit) error {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(ratelimit.URI, ".ratelimit"), nil)
+	if l != nil {
+		l.Debug("URL: %s", URL)
+	}
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	if err := h2o.conn.Delete(l, URL, nil); err != nil {
+		return err
+	}
+	return nil	
+}
+
+func (h2o *H2Object) GetRateLimit(l Logger, auth Auth,ratelimit *RateLimit) error {
+	URL := rpc.BuildHttpURL(h2o.addr, path.Join(ratelimit.URI, ".ratelimit"), nil)
+	if l != nil {
+		l.Debug("URL: %s", URL)
+	}
+
+	h2o.Lock()
+	defer h2o.Unlock()
+
+	h2o.conn.Prepare(auth)
+	defer h2o.conn.Prepare(nil)
+
+	if err := h2o.conn.Get(l, URL, ratelimit); err != nil {
+		return err
+	}
+	return nil	
+}

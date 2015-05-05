@@ -36,5 +36,3 @@ func NewH2Object(host string, port int) *H2Object {
 	}
 	return h2o
 }
-
-
