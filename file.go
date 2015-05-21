@@ -8,7 +8,7 @@ import (
 	"github.com/h2object/rpc"
 )
 
-func (h2o *H2Object) upload_file(l Logger, auth Auth, provider string, dest_uri string, file string) error {
+func (h2o *H2Object) UploadFile(l Logger, auth Auth, provider string, dest_uri string, file string) error {
 	fd, err := os.Open(file)
 	if err != nil {
 		return err
@@ -18,10 +18,10 @@ func (h2o *H2Object) upload_file(l Logger, auth Auth, provider string, dest_uri 
 	_, filename := path.Split(file)
 	contentType := ContentTypeByFilename(filename)
 
-	return h2o.upload(l, auth, provider, dest_uri, contentType, fd)
+	return h2o.Upload(l, auth, provider, dest_uri, contentType, fd)
 }
 
-func (h2o *H2Object) upload(l Logger, auth Auth, provider string, dest_uri string, contentType string, rd io.Reader) error {
+func (h2o *H2Object) Upload(l Logger, auth Auth, provider string, dest_uri string, contentType string, rd io.Reader) error {
 	params := url.Values{
 		"provider": {provider},
 	}

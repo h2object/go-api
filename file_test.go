@@ -10,6 +10,6 @@ func TestFileUpload(t *testing.T) {
 	log := ConsoleLogger{}
 	auth := NewAdminAuth("liujianping","h2object.io")
 	
-	assert.Nil(t, h2o.upload_file(log, auth, "", "/hello.html", "testdata/hello.html"))
+	assert.Nil(t, h2o.UploadFile(log, auth, "", "/hello.html", "testdata/hello.html"))
 
 }
