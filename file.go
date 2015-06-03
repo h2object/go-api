@@ -6,6 +6,7 @@ import (
 	"path"
 	"net/url"
 	"github.com/h2object/rpc"
+	"github.com/h2object/content-type"
 )
 
 func (h2o *H2Object) UploadFile(l Logger, auth Auth, provider string, dest_uri string, file string) error {
@@ -16,7 +17,7 @@ func (h2o *H2Object) UploadFile(l Logger, auth Auth, provider string, dest_uri s
 	defer fd.Close()
 
 	_, filename := path.Split(file)
-	contentType := ContentTypeByFilename(filename)
+	contentType := content_type.DefaultContentTypeHelper.ContentTypeByFilename(filename)
 
 	return h2o.Upload(l, auth, provider, dest_uri, contentType, fd)
 }
